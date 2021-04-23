@@ -3,3 +3,4 @@ requests==2.19.1
 pandas==0.23.3
 beautifulsoup4==4.8.1
 pygoogletranslation
+pywin32==225

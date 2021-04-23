@@ -1,11 +1,30 @@
 #-*-coding:utf-8 -*-
 
-import requests
-import execjs
-import json
+# import requests
+# import execjs
+# import json
+from pygoogletranslation import Translator
+
+# 实例化翻译器，由于模块默认的服务url在国内无法使用，所以我们修改成国内可用的google翻译服务地址
+translator = Translator(service_url='translate.google.cn')
+def googleTrans(text):
+    try:
+        # get url
+        # responce
+        result = translator.translate(text, dest='zh-CN')
+        # r = requests.get(url)
+        # 返回json格式的数据
+        # data = json.loads(r.text)
+        print(result.text)
+        return result.text
+    except Exception as e:
+        print("出错了")
+        print(e)
+
 
 #使用谷歌翻译
 #py的JS类
+'''
 class Py4Js():     
   def __init__(self):  
     self.ctx = execjs.compile(""" 
@@ -66,8 +85,11 @@ def googleTrans(text):
         r = requests.get(url)
         #返回json格式的数据
         data = json.loads(r.text)
+        print('jhfff',data)
         result = data[0][0][0]
+        print('lpoi',result)
         return result
     except Exception as e:
         print("出错了")
         print(e)
+'''

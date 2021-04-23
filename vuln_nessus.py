@@ -5,6 +5,7 @@ import googletranslater
 import pandas as pd
 from lxml import etree
 import re
+import lxml.etree as ET
 import sys
 
 # 翻译程序主入口
@@ -33,14 +34,20 @@ def zhengli_csv(srcFile, info_flag):
             for row in result1:
                 new_list[j][1] = row[2]
                 new_list[j][4] = row[4]
+                new_list[j][5] = row[0]
+                new_list[j][6] = row[5]
+
         else:
             # 翻译并写入漏洞库
             new_list[j][1] = googletranslater.googleTrans(i[1])
             #x = googletranslater.googleTrans(i[4].replace('\n', '').replace('\r', ''))
             new_list[j][4] = googletranslater.googleTrans(i[4].replace('\n', '').replace('\r', ''))
-            #print('1234',new_list[j][4])
-            conn.execute("insert into nessus values(?, ?, ?, ?, ?)",
-                         (int(i[0]), i[1], new_list[j][1], i[2], new_list[j][4]))
+            #des = re.sub(r'\n|[ \t]+', ' ', i[5])
+            #print('xxxx',des)
+            new_list[j][5] = str(googletranslater.googleTrans(i[5].replace('\n', '').replace('\r', '')))
+            # print('dddd', new_list[j][5])
+            conn.execute("insert into nessus values(?, ?, ?, ?, ?, ?)",
+                         (new_list[j][5], int(i[0]), new_list[j][1], i[2], new_list[j][4], None))
             # print(new_list[j][1])
             # print(type(new_list[j][4]))
 
@@ -52,12 +59,12 @@ def zhengli_csv(srcFile, info_flag):
     for x in new_list:
         # x[1] = x[1].replace("\n", "")
         # x[4] = x[4].replace("\n", "")
-        nessus_list.append([x[1], x[2], x[3], x[4]])
+        nessus_list.append([x[1], x[2], x[5],'', x[3], x[4]])
 
     # write2csv(new_list, destFile)
     # 提交插入
     conn.commit()
-    print(nessus_list)
+    #print(nessus_list)
     return nessus_list
 
 
@@ -94,10 +101,11 @@ def zhengli_html(srcFile, info_flag):
             # conn.execute("insert into nessus values(?, ?, ?, ?, ?)", (int(i[0]), i[1], new_list[j][1], i[2], new_list[j][4]))
             i[1] = googletranslater.googleTrans(i[1])
             i[4] = googletranslater.googleTrans(i[4].replace('\n', '').replace('\r', ''))
+            i[5] = googletranslater.googleTrans(i[5])
             print(tmp_en_name)
             print('*************\n')
-            print(i[1])
-            conn.execute("insert into nessus values(?, ?, ?, ?, ?)", (int(i[0]), tmp_en_name, i[1], i[2], i[4]))
+            print(i)
+            conn.execute("insert into nessus values(?, ?, ?, ?, ?, ?)", (i[5], int(i[0]), i[1], i[2], i[4], 'NULL'))
 
         j = j + 1
 
@@ -108,13 +116,13 @@ def zhengli_html(srcFile, info_flag):
     for x in csv_list:
         x[1] = x[1].replace("\n", "")
         x[4] = x[4].replace("\n", "")
-        nessus_list.append([x[1], x[2], x[3], x[4]])
+        nessus_list.append([x[2], x[1], x[0], x[3], x[4]])
 
         destFile = 'result.xlst'
 
     # 提交插入
     conn.commit()
-    return  nessus_list
+    return nessus_list
  #   return ("主机IP", nessus_list)
 
 
@@ -128,7 +136,8 @@ def read_csv(csv_name, info_flag):
     data_risk = pd.read_csv(filepath_or_buffer=csv_name, engine='python', encoding='ISO-8859-1')["Risk"].values
     data_host = pd.read_csv(filepath_or_buffer=csv_name, engine='python', encoding='ISO-8859-1')["Host"].values
     data_solution = pd.read_csv(filepath_or_buffer=csv_name, engine='python', encoding='ISO-8859-1')["Solution"].values
-
+    data_Description = pd.read_csv(filepath_or_buffer=csv_name, engine='python', encoding='ISO-8859-1')["Description"].values
+    data_simpydan = ""
     # 设置列表存储读取到的值
     # 这里的思路和vuln_appscan是一样的。
     mylist, risk_high, risk_medium, risk_low = [], [], [], []
@@ -147,28 +156,28 @@ def read_csv(csv_name, info_flag):
             if data_solution[i] == "nan":
                 risk_low.append([data_pluginID[i], data_name[i], "低", data_host[i], "无"])
             else:
-                risk_low.append([data_pluginID[i], data_name[i], "低", data_host[i], str(data_solution[i])])
+                risk_low.append([data_pluginID[i], data_name[i], "低", data_host[i], str(data_solution[i]), str(data_Description[i]), data_simpydan])
         elif data_risk[i] == "Info" and info_flag:
             # print(str(i)+data_risk[i])
             if data_solution[i] == "nan":
                 risk_low.append([data_pluginID[i], data_name[i], "低", data_host[i], "无"])
             else:
-                risk_low.append([data_pluginID[i], data_name[i], "低", data_host[i], str(data_solution[i])])
+                risk_low.append([data_pluginID[i], data_name[i], "低", data_host[i], str(data_solution[i]), str(data_Description(i)), data_simpydan])
         # 读取紧急级别
         elif data_risk[i] == "Critical" or data_risk[i] == "High":
             # risk_high.append([data_pluginID[i], data_name[i], data_risk[i], data_host[i], data_solution[i]])
-            risk_high.append([data_pluginID[i], data_name[i], "高", data_host[i], data_solution[i]])
+            risk_high.append([data_pluginID[i], data_name[i], "高", data_host[i], data_solution[i], data_Description[i], data_simpydan])
 
 
         # 读取中级别
         elif data_risk[i] == "Medium":
             # risk_medium.append([data_pluginID[i], data_name[i], data_risk[i], data_host[i], data_solution[i]])
-            risk_medium.append([data_pluginID[i], data_name[i], "中", data_host[i], data_solution[i]])
+            risk_medium.append([data_pluginID[i], data_name[i], "中", data_host[i], data_solution[i], data_Description[i], data_simpydan])
 
         # 读取低级别
         elif data_risk[i] == "Low":
             # risk_low.append([data_pluginID[i], data_name[i], data_risk[i], data_host[i], data_solution[i]])
-            risk_low.append([data_pluginID[i], data_name[i], "低", data_host[i], data_solution[i]])
+            risk_low.append([data_pluginID[i], data_name[i], "低", data_host[i], data_solution[i], data_Description[i], data_simpydan])
 
     risk_high.sort(key=takeName)
     risk_medium.sort(key=takeName)
@@ -193,7 +202,7 @@ def read_csv(csv_name, info_flag):
 
 
 def read_html(html_name, info_flag):
-    pluginID, name, host, risk, solution = '', '', '', '', ''
+    pluginID, name, host, risk, solution, description = '', '', '', '', '', ''
     # nessus_html_lists = []
     mylist, risk_high, risk_medium, risk_low = [], [], [], []
     html = etree.parse(html_name, etree.HTMLParser())
@@ -218,14 +227,20 @@ def read_html(html_name, info_flag):
         # 找到漏洞下的container 找到漏洞细节及修复方案
         elif "container" in str(etree.tostring(vuln)):
             solution_div_list = vuln.xpath('./div[8]')
+            description_div_list = vuln.xpath('./div[4]')[0]
+            description_div_all = description_div_list.xpath('string(.)')
             solution = solution_div_list[0].text
+            sum = ''
+            for i in description_div_all:
+                sum = sum + i
+            description = sum
 
             if risk == '高':
-                risk_high.append([pluginID, name, risk, host, solution])
+                risk_high.append([pluginID, name, risk, host, solution, description])
             elif risk == '中':
-                risk_medium.append([pluginID, name, risk, host, solution])
+                risk_medium.append([pluginID, name, risk, host, solution, description])
             elif risk == '低':
-                risk_low.append([pluginID, name, risk, host, solution])
+                risk_low.append([pluginID, name, risk, host, solution, description])
             else:
                 pass
         else:
@@ -318,7 +333,7 @@ def write2csv(Nlist,xlsxname):
     with open(xlsxname,'w',newline='', encoding='utf-8-sig') as f:
         csv_writer = csv.writer(f, dialect='excel')
         # 写入标题
-        title = ['序号', '漏洞名', '危害级别', '主机', '建议']
+        title = ['序号', '漏洞名', '漏洞等级', '详细信息描述', '简要危害描述', '主机', '建议']
         csv_writer.writerow(title)
         j = 0
         for i in Nlist:
@@ -330,12 +345,11 @@ def write2csv(Nlist,xlsxname):
     # text2.update()
     print("写入完成")
 
-
 if __name__ == '__main__':
-   # filename = sys.argv[1]
+    # filename = sys.argv[1]
     filename = 'oray.html'
     info_flag = False
-    list_host = zhengli_html(filename,info_flag)
-    write2csv(list_host,'result.csv')
+    list_host = zhengli_html(filename, info_flag)
+    # write2csv(list_host,'result.csv')
 
 
